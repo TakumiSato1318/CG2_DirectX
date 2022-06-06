@@ -242,16 +242,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// 頂点データ
 	Vertex vertices[] = {
 		// x      y     z       u     v
-		{{ 0.0f,   100.0f, 0.0f},  {0.0f, 1.0f}}, // 左下
-		{{ 0.0f,       0.0f, 0.0f},  {0.0f, 0.0f}}, // 左上
-		{{100.0f, 100.0f, 0.0f},  {1.0f, 1.0f}}, // 右下
-		{{100.0f,     0.0f, 0.0f}, {1.0f, 0.0f}}, // 右上
+		{{ -50.0f,   -50.0f, 50.0f},  {0.0f, 1.0f}}, // 左下
+		{{ -50.0f,    50.0f, 50.0f},  {0.0f, 0.0f}}, // 左上
+		{{  50.0f,   -50.0f, 50.0f},  {1.0f, 1.0f}}, // 右下
+		{{  50.0f,    50.0f, 50.0f},   {1.0f, 0.0f}}, // 右上
 	};
 	// インデックスデータ
 	unsigned short indices[] = {
 		0, 1, 2, // 三角形1つ目
 		1, 2, 3, // 三角形2つ目
-	};
+	}; 
 
 	// 頂点データ全体のサイズ = 頂点データ一つ分のサイズ * 頂点データの要素数
 	UINT sizeVB = static_cast<UINT>(sizeof(vertices[0]) * _countof(vertices));
@@ -356,6 +356,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ID3D12Resource* constBuffMaterial = nullptr;
 	ID3D12Resource* constBuffTransform = nullptr;
 	ConstBufferDataTransform* constMapTransform = nullptr;
+
 	// 定数バッファの生成
 	result = device->CreateCommittedResource(
 		&cbHeapProp, // ヒープ設定
@@ -371,6 +372,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	assert(SUCCEEDED(result));
 	// 値を書き込むと自動的に転送される
 	constMapMaterial->color = XMFLOAT4(1, 1, 1, 1.0); // RGBAで半透明の白
+
+	
 
 	// GPU仮想アドレス
 	vbView.BufferLocation = vertBuff->GetGPUVirtualAddress();
@@ -473,6 +476,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		assert(SUCCEEDED(result));
 	}
 
+	//透視投影行列の計算
+	constMapTransform->mat = XMMatrixPerspectiveFovLH(
+		XMConvertToRadians(45.0),
+		(float)window_width / window_height,
+		0.1, 1000.0);
 	// SRVの最大個数
 	const size_t kMaxSRVCount = 2056;
 
