@@ -241,11 +241,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	};
 	// 頂点データ
 	Vertex vertices[] = {
-		// x      y     z       u     v
-		{{ -50.0f,   -50.0f, 50.0f},  {0.0f, 1.0f}}, // 左下
-		{{ -50.0f,    50.0f, 50.0f},  {0.0f, 0.0f}}, // 左上
-		{{  50.0f,   -50.0f, 50.0f},  {1.0f, 1.0f}}, // 右下
-		{{  50.0f,    50.0f, 50.0f},   {1.0f, 0.0f}}, // 右上
+		//    x             y        z          u     v
+		{{ -50.0f,   -50.0f, 0.0f},  {0.0f, 1.0f}}, // 左下
+		{{ -50.0f,    50.0f,  0.0f},  {0.0f, 0.0f}}, // 左上
+		{{  50.0f,   -50.0f,  0.0f},  {1.0f, 1.0f}}, // 右下
+		{{  50.0f,    50.0f,  0.0f},   {1.0f, 0.0f}}, // 右上
 	};
 	// インデックスデータ
 	unsigned short indices[] = {
@@ -386,7 +386,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ScratchImage scratchImg{};
 	// WICテクスチャのロード
 	result = LoadFromWICFile(
-		L"Resources/image1.jpeg",   //「Resources」フォルダの
+		L"Resources/image3.jpeg",   //「Resources」フォルダ
 		WIC_FLAGS_NONE,
 		&metadata, scratchImg);
 	ScratchImage mipChain{};
@@ -476,11 +476,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		assert(SUCCEEDED(result));
 	}
 
-	//透視投影行列の計算
-	constMapTransform->mat = XMMatrixPerspectiveFovLH(
-		XMConvertToRadians(45.0),
-		(float)window_width / window_height,
-		0.1, 1000.0);
+	//射影変換行列(透視投影)
+	XMMATRIX matProjection =
+		XMMatrixPerspectiveFovLH(
+			XMConvertToRadians(45.0f),
+			(float)window_width / window_height,
+			0.1, 1000.0f
+	);
+
+	float angle = 0.0f; //カメラの回転角
+	
+	//ビュー変換行列
+	XMMATRIX matView;
+	XMFLOAT3 eye(0, 0, -100); //視点座標
+	XMFLOAT3 target(0, 0, 0); //注視点座標
+	XMFLOAT3 up(0, 1, 0);       //上方向ベクトル
+	matView = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+	
+	//二つの行列を一つに合成する
+	constMapTransform->mat = matView * matProjection;
+	
 	// SRVの最大個数
 	const size_t kMaxSRVCount = 2056;
 
@@ -714,7 +729,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		//バックバッファの番号を取得
 		UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
+		
+		if (key[DIK_D] || key[DIK_A])
+		{
+			if (key[DIK_D]) { angle += XMConvertToRadians(1.0f); }
+			else if (key[DIK_A]) { angle -= XMConvertToRadians(1.0f); }
 
+			//angleラジアンだけy軸回りに回転。半径は-100
+			eye.x = -100 * sinf(angle);
+			eye.z = -100 * cosf(angle);
+			matView = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+		}
+		//定数バッファに転送
+		constMapTransform->mat = matView * matProjection;
+		
 		//1.リソースバリアで書き込み可能に変更
 		D3D12_RESOURCE_BARRIER barrierDesc{};
 		barrierDesc.Transition.pResource = backBuffers[bbIndex];//バックバッファを指定
